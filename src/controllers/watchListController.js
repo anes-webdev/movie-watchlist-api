@@ -1,7 +1,14 @@
 import { prisma } from "../config/db.js";
 
+const getAllWatchLists = async (req, res) => {
+  const userId = req.user.id;
+  console.log(userId);
+  const allWatchLists = await prisma.watchListItem.findMany({ where: { userId: userId } });
+  res.status(200).json(allWatchLists);
+};
+
 const addToWatchList = async (req, res) => {
-  const { movieId, status, rating, notes, userId } = req.body;
+  const { movieId, status, rating, notes } = req.body;
   const movie = await prisma.movie.findUnique({ where: { id: movieId } });
   if (!movie) return res.status(404).json({ error: "Movie not found" });
   const watchListItemExists = await prisma.watchListItem.findUnique({
@@ -9,7 +16,8 @@ const addToWatchList = async (req, res) => {
       // The combination is unique:
       // For this check we have to add this line to schema: @@unique([userId, movieId])
       userId_movieId: {
-        userId: userId,
+        // We're getting user from middleware and use it here:
+        userId: req.user.id,
         movieId: movieId,
       },
     },
@@ -19,7 +27,7 @@ const addToWatchList = async (req, res) => {
   }
   const watchListItem = await prisma.watchListItem.create({
     data: {
-      userId,
+      userId: req.user.id,
       movieId,
       status: status || "PLANNED",
       rating,
@@ -34,4 +42,19 @@ const addToWatchList = async (req, res) => {
   });
 };
 
-export { addToWatchList };
+const removeFromWatchList = async (req, res) => {
+  const watchListId = req.params.id;
+  const watchListItem = await prisma.watchListItem.findUnique({
+    where: { id: watchListId },
+  });
+  if (!watchListItem) {
+    return res.status(404).json({ error: "The watch list not found" });
+  }
+  if (watchListItem.userId !== req.user.id) {
+    return res.status(403).json({ error: "Not allowed" });
+  }
+  await prisma.watchListItem.delete({ where: { id: watchListId } });
+  return res.status(200).json("Successfully deleted");
+};
+
+export { addToWatchList, removeFromWatchList, getAllWatchLists };
