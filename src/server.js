@@ -23,8 +23,8 @@ app.use("/movies", movieRoutes);
 app.use("/watch-list", watchListRoutes);
 
 const port = 5001;
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+const server = app.listen(port, () => {
+  console.log(`Server running on Port ${port}`);
 });
 
 process.on("unhandledRejection", async (error) => {
